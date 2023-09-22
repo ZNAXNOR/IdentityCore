@@ -35,10 +35,14 @@ namespace IdentityCore.Controllers
         {
             if (ModelState.IsValid)
             {
-                var result = await _signInManager.PasswordSignInAsync(loginViewModel.UserName, loginViewModel.Password, loginViewModel.RememberMe, lockoutOnFailure: false);
+                var result = await _signInManager.PasswordSignInAsync(loginViewModel.UserName, loginViewModel.Password, loginViewModel.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
                 {
                     return RedirectToAction("Index", "Home");
+                }
+                if (result.IsLockedOut)
+                {
+                    return View("Lockout");
                 }
                 else
                 {
