@@ -18,7 +18,7 @@ builder.Services.Configure<IdentityOptions>(opt =>
     opt.Password.RequireLowercase = true;
     opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromSeconds(10);
     opt.Lockout.MaxFailedAccessAttempts = 5;
-    opt.SignIn.RequireConfirmedAccount = true;
+    //opt.SignIn.RequireConfirmedAccount = true;
 });
 
 
@@ -36,6 +36,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 
