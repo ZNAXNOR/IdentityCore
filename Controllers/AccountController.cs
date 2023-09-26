@@ -3,6 +3,7 @@ using IdentityCore.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Security.Claims;
 
 namespace IdentityCore.Controllers
@@ -11,12 +12,15 @@ namespace IdentityCore.Controllers
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
         public AccountController(UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager)
+            SignInManager<IdentityUser> signInManager,
+            RoleManager<IdentityRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
         }
 
         //Authentication
@@ -142,15 +146,33 @@ namespace IdentityCore.Controllers
 
 
         //Register
+        [HttpGet]
         public async Task<IActionResult> Register(string? returnUrl = null)
         {
+            if (!await _roleManager.RoleExistsAsync("Pokemon"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Pokemon"));
+                await _roleManager.CreateAsync(new IdentityRole("Trainer"));
+            }
+            List<SelectListItem> listItems = new List<SelectListItem>();
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Pokemon",
+                Text = "Pokemon"
+            });
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Trainer",
+                Text = "Trainer"
+            });
             RegisterViewModel registerViewModel = new RegisterViewModel();
+            registerViewModel.RoleList = listItems;
             registerViewModel.ReturnUrl = returnUrl;
             return View(registerViewModel);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register(RegisterViewModel registerViewModel, string? returnUrl)
+        public async Task<IActionResult> Register(RegisterViewModel registerViewModel, string? returnUrl = null)
         {
             registerViewModel.ReturnUrl = returnUrl;
             returnUrl = returnUrl ?? Url.Content("~/");
@@ -160,6 +182,14 @@ namespace IdentityCore.Controllers
                 var result = await _userManager.CreateAsync(user, registerViewModel.Password);
                 if (result.Succeeded)
                 {
+                    if (registerViewModel.RoleSelected != null && registerViewModel.RoleSelected.Length > 0 && registerViewModel.RoleSelected == "Trainer")
+                    {
+                        await _userManager.AddToRoleAsync(user, "Trainer");
+                    }
+                    else
+                    {
+                        await _userManager.AddToRoleAsync(user, "Pokemon");
+                    }
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return LocalRedirect(returnUrl);
                 }

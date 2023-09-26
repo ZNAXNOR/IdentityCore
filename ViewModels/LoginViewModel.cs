@@ -9,10 +9,6 @@ namespace IdentityCore.ViewModels
         [EmailAddress]
         public string Email { get; set; }
 
-        //Username
-        [Required]
-        public string UserName { get; set; }
-
         //Password
         [Required]
         [DataType(DataType.Password)]

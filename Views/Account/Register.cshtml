@@ -46,7 +46,7 @@
     <div class="row mb-4">
         <label asp-for="RoleSelected" class="col-sm-2 col-form-label">Role Selected</label>
         <div class="col-sm-10">
-            <select asp-for="RoleSelected" asp-items="@Html.GetEnumSelectList<RoleSelected>()" class="form-control">
+            <select asp-for="RoleSelected" asp-items="@Model.RoleList" class="form-control">
                 <option value="">Choose a category...</option>
             </select>
             <span asp-validation-for="RoleSelected" class="text-danger"></span>
