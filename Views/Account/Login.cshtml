@@ -1,38 +1,68 @@
 ﻿@using IdentityCore.ViewModels
+@using Microsoft.AspNetCore.Identity
 @model LoginViewModel
+@inject SignInManager<IdentityUser> signInManager
 
-<form asp-controller="Account" asp-action="Login" asp-route-returnurl="@Model.ReturnUrl" method="post" role="form">
-    <h4>Use a local account to log in.</h4>
-    <hr />
-    <div asp-validation-summary="All" class="text-danger"></div>
-    <div class="mb-3">
-        <label asp-for="UserName" class="form-label">Email address</label>
-        <input asp-for="UserName" class="form-control" id="exampleInputUserName">
-        <span asp-validation-for="UserName" class="text-danger"></span>
-        <div id="emailHelp" class="form-text">We'll never share your email with anyone else.</div>
-    </div>
-    <div class="mb-3">
-        <label asp-for="Password" class="form-label">Password</label>
-        <input asp-for="Password" type="password" class="form-control" id="exampleInputPassword">
-        <span asp-validation-for="Password" class="text-danger"></span>
-    </div>
-    <div class="form-group mb-3">
-        <div class=" col-md-10">
-            <div class="custom-checkbox">
-                <label asp-for="RememberMe">
-                    <input asp-for="RememberMe" />
-                    @Html.DisplayNameFor(m => m.RememberMe)
-                </label>
+
+<h1 class="text-info">Login</h1>
+<div class="row">
+    <div class="col-md-8">
+        <form asp-controller="Account" asp-action="Login" asp-route-returnurl="@Model.ReturnUrl" method="post" role="form">
+            <h4>Use a local account to log in.</h4>
+            <hr />
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Email address</label>
+                <input asp-for="Email" class="form-control">
+                <span asp-validation-for="Email" class="text-danger"></span>
+                <div id="emailHelp" class="form-text">We'll never share your email with anyone else.</div>
             </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Password</label>
+                <input asp-for="Password" type="password" class="form-control" id="exampleInputPassword">
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+            <div class="form-group mb-3">
+                <div class=" col-md-10">
+                    <div class="custom-checkbox">
+                        <label asp-for="RememberMe">
+                            <input asp-for="RememberMe" />
+                            @Html.DisplayNameFor(m => m.RememberMe)
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group mb-3">
+                <button type="submit" class="btn btn-success">Log in</button>
+            </div>
+            <p>
+                <a asp-action="ForgotPassword" type="button" class="btn btn-link">ForgotPassword</a>
+                <a asp-action="Register" type="button" class="btn btn-link">Register as a new user?</a>
+            </p>
+        </form>
+    </div>
+    @{
+        var schemes = await signInManager.GetExternalAuthenticationSchemesAsync();
+        var loginProivders = schemes.ToList();
+    }
+    @if (loginProivders.Count() > 0)
+    {
+        <div class="col-md-4">
+            <section>
+                <h4>User another service to log in.</h4>
+                <form asp-controller="Account" asp-action="ExternalLogin" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" role="form">
+                    <div>
+                        <p>
+                            @foreach (var provider in loginProivders)
+                            {
+                                <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.Name account">
+                                    @provider.Name
+                                </button>
+                            }
+                        </p>
+                    </div>
+                </form>
+            </section>
         </div>
-    </div>
-    <div class="form-group mb-3">
-        <button type="submit" class="btn btn-success">Log in</button>
-    </div>
-    <p>
-        <a asp-action="Register"> Register as a new user?</a>
-    </p>
-    <p>
-        @*<a asp-action="ForgotPassword"> Forgot your passowrd?</a>*@
-    </p>
-</form>
+    }
+</div>

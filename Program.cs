@@ -1,17 +1,32 @@
 using IdentityCore.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+var configuration = builder.Configuration;
 
-// Add services to the container.
+//Add services to the container.
 builder.Services.AddControllersWithViews();
-// Database
+//Database
 builder.Services.AddDbContext<ApplicationDbContext>(e =>
     e.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-// Iddentity Service
+//Iddentity Service
 builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
-// Password Requirements
+//Authentication
+services.AddAuthentication()
+    .AddGoogle(googleOptions =>
+    {
+        googleOptions.ClientId = configuration["Authentication:Google:ClientId"];
+        googleOptions.ClientSecret = configuration["Authentication:Google:ClientSecret"];
+    })
+    .AddFacebook(facebookOptions =>
+    {
+        facebookOptions.AppId = configuration["Authentication:Facebook:AppId"];
+        facebookOptions.AppSecret = configuration["Authentication:Facebook:AppSecret"];
+    });
+//Password Requirements
 builder.Services.Configure<IdentityOptions>(opt =>
 {
     opt.Password.RequiredLength = 5;
@@ -24,11 +39,11 @@ builder.Services.Configure<IdentityOptions>(opt =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+//Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    //The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
