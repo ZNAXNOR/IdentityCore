@@ -10,20 +10,188 @@ namespace IdentityCore.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<AppUser> _userManager;
+        private readonly SignInManager<AppUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IEmailSenderInterface _emailSender;
 
-        public AccountController(UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager,
-            RoleManager<IdentityRole> roleManager)
+        public AccountController(UserManager<AppUser> userManager,
+            SignInManager<AppUser> signInManager,
+            RoleManager<IdentityRole> roleManager,
+            IEmailSenderInterface emailSender)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
+            _emailSender = emailSender;
         }
 
-        //Authentication
+
+        // 
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+
+        // Login
+        [HttpGet]
+        public IActionResult Login(string? returnUrl = null)
+        {
+            LoginViewModel loginViewModel = new LoginViewModel();
+            loginViewModel.ReturnUrl = returnUrl ?? Url.Content("~/");
+            return View(loginViewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(LoginViewModel loginViewModel, string returnUrl)
+        {
+            if (ModelState.IsValid)
+            {
+                var result = await _signInManager.PasswordSignInAsync(loginViewModel.Email, loginViewModel.Password, loginViewModel.RememberMe, lockoutOnFailure: true);
+                if (result.Succeeded)
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+                if (result.IsLockedOut)
+                {
+                    return View("Lockout");
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                    return View(loginViewModel);
+                }
+            }
+            return View(loginViewModel);
+        }
+
+
+        // Forget Password
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel forgotPasswordViewModel)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByEmailAsync(forgotPasswordViewModel.Email);
+                if (user == null)
+                {
+                    return RedirectToAction("ForgotPasswordConfirmation");
+                }
+                var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var callbackurl = Url.Action("ResetPassword", "Account", new { userId = user.Id, code = code }, protocol: HttpContext.Request.Scheme);
+
+                await _emailSender.SendEmailAsync(forgotPasswordViewModel.Email, "Reset Email Confirmation", "Please reset email by going to this " + callbackurl );
+                return RedirectToAction("ForgotPasswordConfirmation");
+            }
+            return View(forgotPasswordViewModel);
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPasswordConfirmation()
+        {
+            return View();
+        }
+
+
+        // Reset Password
+        [HttpGet]
+        public IActionResult ResetPassword(string code = null)
+        {
+            return code == null ? View("Error") : View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel resetPasswordViewModel)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByEmailAsync(resetPasswordViewModel.Email);
+                if (user == null)
+                {
+                    ModelState.AddModelError("Email", "User not found");
+                    return View();
+                }
+                var result = await _userManager.ResetPasswordAsync(user, resetPasswordViewModel.Code, resetPasswordViewModel.Password);
+                if (result.Succeeded)
+                {
+                    return RedirectToAction("ResetPasswordConfirmation");
+                }
+            }
+            return View(resetPasswordViewModel);
+        }
+
+        [HttpGet]
+        public IActionResult ResetPasswordConfirmation()
+        {
+            return View();
+        }
+
+
+        // Register
+        public async Task<IActionResult> Register(string? returnUrl = null)
+        {
+            if (!await _roleManager.RoleExistsAsync("Pokemon"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Pokemon"));
+                await _roleManager.CreateAsync(new IdentityRole("Trainer"));
+            }
+
+            List<SelectListItem> listItems = new List<SelectListItem>();
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Pokemon",
+                Text = "Pokemon"
+            });
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Trainer",
+                Text = "Trainer"
+            });
+
+            RegisterViewModel registerViewModel = new RegisterViewModel();
+            registerViewModel.RoleList = listItems;
+            registerViewModel.ReturnUrl = returnUrl;
+            return View(registerViewModel);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Register(RegisterViewModel registerViewModel, string? returnUrl = null)
+        {
+            registerViewModel.ReturnUrl = returnUrl;
+            returnUrl = returnUrl ?? Url.Content("~/");
+            if (ModelState.IsValid)
+            {
+                var user = new AppUser { Email = registerViewModel.Email, UserName = registerViewModel.UserName };
+                var result = await _userManager.CreateAsync(user, registerViewModel.Password);
+                if (result.Succeeded)
+                {
+                    if (registerViewModel.RoleSelected != null && registerViewModel.RoleSelected.Length > 0 && registerViewModel.RoleSelected == "Trainer")
+                    {
+                        await _userManager.AddToRoleAsync(user, "Trainer");
+                    }
+                    else
+                    {
+                        await _userManager.AddToRoleAsync(user, "Pokemon");
+                    }
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    return LocalRedirect(returnUrl);
+                }
+                ModelState.AddModelError("Password", "User could not be created. Password not unique enough");
+            }
+            return View(registerViewModel);
+        }
+
+
+        // Authentication
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -43,7 +211,7 @@ namespace IdentityCore.Controllers
                 var result = await _userManager.CreateAsync(user);
                 if (result.Succeeded)
                 {
-                    //await _userManager.AddToRoleAsync(user, "User");
+                    await _userManager.AddToRoleAsync(user, "Pokemon");
                     result = await _userManager.AddLoginAsync(user, info);
                     if (result.Succeeded)
                     {
@@ -104,102 +272,7 @@ namespace IdentityCore.Controllers
         }
 
 
-        //
-        public IActionResult Index()
-        {
-            return View();
-        }
-
-
-        //Login
-        [HttpGet]
-        public IActionResult Login(string returnUrl = null)
-        {
-            LoginViewModel loginViewModel = new LoginViewModel();
-            loginViewModel.ReturnUrl = returnUrl ?? Url.Content("~/");
-            return View(loginViewModel);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginViewModel loginViewModel, string returnUrl)
-        {
-            if (ModelState.IsValid)
-            {
-                var result = await _signInManager.PasswordSignInAsync(loginViewModel.Email, loginViewModel.Password, loginViewModel.RememberMe, lockoutOnFailure: true);
-                if (result.Succeeded)
-                {
-                    return RedirectToAction("Index", "Home");
-                }
-                if (result.IsLockedOut)
-                {
-                    return View("Lockout");
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return View();
-                }
-            }
-            return View(loginViewModel);
-        }
-
-
-        //Register
-        [HttpGet]
-        public async Task<IActionResult> Register(string? returnUrl = null)
-        {
-            if (!await _roleManager.RoleExistsAsync("Pokemon"))
-            {
-                await _roleManager.CreateAsync(new IdentityRole("Pokemon"));
-                await _roleManager.CreateAsync(new IdentityRole("Trainer"));
-            }
-            List<SelectListItem> listItems = new List<SelectListItem>();
-            listItems.Add(new SelectListItem()
-            {
-                Value = "Pokemon",
-                Text = "Pokemon"
-            });
-            listItems.Add(new SelectListItem()
-            {
-                Value = "Trainer",
-                Text = "Trainer"
-            });
-            RegisterViewModel registerViewModel = new RegisterViewModel();
-            registerViewModel.RoleList = listItems;
-            registerViewModel.ReturnUrl = returnUrl;
-            return View(registerViewModel);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> Register(RegisterViewModel registerViewModel, string? returnUrl = null)
-        {
-            registerViewModel.ReturnUrl = returnUrl;
-            returnUrl = returnUrl ?? Url.Content("~/");
-            if (ModelState.IsValid)
-            {
-                var user = new AppUser { Email = registerViewModel.Email, UserName = registerViewModel.UserName };
-                var result = await _userManager.CreateAsync(user, registerViewModel.Password);
-                if (result.Succeeded)
-                {
-                    if (registerViewModel.RoleSelected != null && registerViewModel.RoleSelected.Length > 0 && registerViewModel.RoleSelected == "Trainer")
-                    {
-                        await _userManager.AddToRoleAsync(user, "Trainer");
-                    }
-                    else
-                    {
-                        await _userManager.AddToRoleAsync(user, "Pokemon");
-                    }
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl);
-                }
-                ModelState.AddModelError("Password", "User could not be created. Password is not unique enough");
-            }
-            return View(registerViewModel); 
-        }
-
-
-        //Signout
+        // Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> LogOff()

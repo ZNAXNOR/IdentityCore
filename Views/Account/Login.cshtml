@@ -1,8 +1,9 @@
 ﻿@using IdentityCore.ViewModels
 @using Microsoft.AspNetCore.Identity
-@model LoginViewModel
-@inject SignInManager<IdentityUser> signInManager
 
+@model LoginViewModel
+
+@inject SignInManager<AppUser> signInManager
 
 <h1 class="text-info">Login</h1>
 <div class="row">

@@ -1,21 +1,24 @@
 using IdentityCore.Data;
+using IdentityCore.Helpers;
+using IdentityCore.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
-var services = builder.Services;
 var configuration = builder.Configuration;
 
-//Add services to the container.
+// Add services to the container.
 builder.Services.AddControllersWithViews();
-//Database
+// Database
 builder.Services.AddDbContext<ApplicationDbContext>(e =>
-    e.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-//Iddentity Service
-builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
-//Authentication
-services.AddAuthentication()
+    e.UseSqlServer(builder.Configuration.GetConnectionString("MSSQLConnection")));
+// Iddentity Service
+builder.Services.AddIdentity<AppUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
+// Email Service
+builder.Services.AddTransient<IEmailSenderInterface, EmailSenderService>();
+builder.Services.Configure<AuthMessageSenderOptions>(builder.Configuration.GetSection("Email:Google:SMTP"));
+// Authentication
+builder.Services.AddAuthentication()
     .AddGoogle(googleOptions =>
     {
         googleOptions.ClientId = configuration["Authentication:Google:ClientId"];
@@ -26,7 +29,7 @@ services.AddAuthentication()
         facebookOptions.AppId = configuration["Authentication:Facebook:AppId"];
         facebookOptions.AppSecret = configuration["Authentication:Facebook:AppSecret"];
     });
-//Password Requirements
+// Password Requirements
 builder.Services.Configure<IdentityOptions>(opt =>
 {
     opt.Password.RequiredLength = 5;
@@ -39,7 +42,7 @@ builder.Services.Configure<IdentityOptions>(opt =>
 
 var app = builder.Build();
 
-//Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
