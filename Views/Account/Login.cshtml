@@ -12,11 +12,16 @@
             <h4>Use a local account to log in.</h4>
             <hr />
             <div asp-validation-summary="All" class="text-danger"></div>
-            <div class="mb-3">
+            @* <div class="mb-3">
                 <label asp-for="Email" class="form-label">Email address</label>
                 <input asp-for="Email" class="form-control">
                 <span asp-validation-for="Email" class="text-danger"></span>
                 <div class="form-text">We'll never share your email with anyone else.</div>
+            </div> *@
+            <div class="mb-3">
+                <label asp-for="UserName" class="form-label">User Name</label>
+                <input asp-for="UserName" class="form-control" id="exampleInputUserName">
+                <span asp-validation-for="UserName" class="text-danger"></span>
             </div>
             <div class="mb-3">
                 <label asp-for="Password" class="form-label">Password</label>

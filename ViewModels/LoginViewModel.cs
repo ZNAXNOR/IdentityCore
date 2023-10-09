@@ -4,21 +4,25 @@ namespace IdentityCore.ViewModels
 {
     public class LoginViewModel
     {
-        //Email
-        [Required]
+        // Email
+        //[Required]
         [EmailAddress]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
-        //Password
+        // User Name
+        [Required]
+        public string UserName { get; set; }
+
+        // Password
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; }
 
-        //Remember Me
+        // Remember Me
         [Display(Name = "Remember Me")]
         public bool RememberMe { get; set; }
 
-        //Return Url
+        // Return Url
         public string ReturnUrl { get; set; }
     }
 }
